@@ -123,7 +123,3 @@ Fast checks that need no GPU, data or OCR engine: `python tests/test_core.py`.
 | NAFNet architecture (Chen et al., ECCV 2022) | Design of the network; implementation written for this project | Paper |
 | [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) | Text reading with per-character confidence | Apache-2.0 |
 | PyTorch, OpenCV, NumPy, FastAPI, Uvicorn, huggingface_hub | Libraries | BSD / Apache-2.0 / MIT |
-
-## Team
-
-TBD
