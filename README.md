@@ -115,11 +115,6 @@ Fast checks that need no GPU, data or OCR engine: `python tests/test_core.py`.
 - The flags are a prompt to check, not a verification. The measured error rates are in the Results table.
 - Not for proving a receipt is authentic.
 
-## Related work and what is new
-
-- **Related open-source work:** [PhillipMtalika/unfade](https://github.com/PhillipMtalika/unfade) is a benchmark for restoring degraded documents scored by OCR error; [DocRes](https://github.com/ZZZHANG-jx/DocRes) is a general pretrained document restorer. Neither shows the user which restored characters are uncertain. No code from either is used.
-- **What is new here:** character-level flags that combine restoration-ensemble disagreement with OCR confidence, measured against ground truth, and shown to the person reading the receipt.
-
 ## Third-party components
 
 | Component | Use | Licence |
