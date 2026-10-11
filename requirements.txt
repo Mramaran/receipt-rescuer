@@ -1,0 +1,7 @@
+torch>=2.2
+numpy
+opencv-python-headless
+fastapi
+uvicorn
+python-multipart
+huggingface_hub
