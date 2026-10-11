@@ -21,7 +21,7 @@ A highlight means "check this". It does not mean the character is wrong, and no 
 
 ## Results
 
-Measured on 20 receipt scans held out from training (13,419 reference characters), faded synthetically at three strengths with a fixed seed. Weights: `runs/run1/best.pt`, 25,000 steps.
+Measured on 20 receipt scans held out from training (13,419 reference characters), faded synthetically at three strengths with a fixed seed. Weights: `weights/rescuenet.pt`, the best checkpoint of a 25,000-step run.
 
 | Fade strength | Faded input CER | CLAHE baseline CER | Restored CER | Share flagged | Error rate, flagged | Error rate, unflagged | Errors caught by flags |
 |---|---|---|---|---|---|---|---|
@@ -55,7 +55,7 @@ How to read these numbers:
 - Some scans are damaged before any fading (a misprinted price, for example). Restoration reproduces that damage; it does not fill in what was never printed.
 - The OCR-confidence threshold was chosen on 12 other held-out scans, which are excluded from this table (`--skip 20`).
 
-Reproduce with `python evaluate.py --weights runs/run1/best.pt --clean data/sroie --skip 20 --n 20 --severity 0.6`.
+Reproduce with `python evaluate.py --weights weights/rescuenet.pt --clean data/sroie --skip 20 --n 20 --severity 0.6`.
 
 ## Setup
 
@@ -74,7 +74,7 @@ Install Tesseract separately (on Windows: `winget install UB-Mannheim.TesseractO
 # 1. Clean receipt scans used as training ground truth (about 740 MB)
 python scripts/download_data.py
 
-# 2. Look at the synthetic fading next to real faded receipts
+# 2. Preview the synthetic fading at three strengths
 python scripts/preview_degrade.py --n 6
 
 # 3. Train (settings, seed and log are written to runs/<name>/)
