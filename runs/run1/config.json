@@ -1,0 +1,19 @@
+{
+  "data": "data/sroie",
+  "name": "run1",
+  "iters": 25000,
+  "batch": 16,
+  "patch": 192,
+  "lr": 0.001,
+  "width": 32,
+  "workers": 6,
+  "val_every": 1000,
+  "val_patches": 200,
+  "ema": 0.999,
+  "seed": 1234,
+  "params": 3274017,
+  "device": "cuda",
+  "train_images": 641,
+  "val_images": 71,
+  "started": "2026-10-10 23:31:11"
+}
