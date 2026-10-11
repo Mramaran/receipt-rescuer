@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipt Rescuer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Martian+Mono:wdth,wght@75..112.5,300..700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --counter: #D5DCDA; --counter-deep: #BFC8C5;
+    --paper: #FCFCF8; --ink: #22252D; --faded: #6F7686;
+    --pen: #1C3FAA; --pen-dark: #142E7E;
+    --hl-yellow: #F5E62E; --hl-pink: #FF9DBB;
+    --slot: #2A2F36; --alert: #A3261A;
+    --ui: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    --print: "Martian Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--counter); color: var(--ink); font: 17px/1.5 var(--ui); }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+
+  .top { padding: 36px 0 26px; display: flex; flex-wrap: wrap; gap: 8px 32px; align-items: baseline;
+         justify-content: space-between; }
+  .top h1 { margin: 0; font-size: clamp(34px, 4.4vw, 44px); line-height: 1; font-weight: 700; letter-spacing: -0.025em; }
+  .top p { margin: 10px 0 0; font-size: 20px; max-width: 34ch; line-height: 1.35; }
+  #model { font-size: 15px; color: #444B52; }
+  #model.bad { color: var(--alert); font-weight: 600; }
+
+  .bench { display: grid; grid-template-columns: minmax(0, 470px) minmax(0, 1fr); gap: 40px;
+           align-items: start; padding-bottom: 56px; }
+  @media (max-width: 900px) { .bench { grid-template-columns: 1fr; } }
+
+  /* The printer slot and the strip of paper hanging from it */
+  .slot { background: var(--slot); color: #E9ECEB; border-radius: 10px 10px 4px 4px; padding: 12px 14px;
+          display: flex; gap: 12px; align-items: center; position: relative; z-index: 2;
+          box-shadow: 0 2px 0 #171A1E; }
+  .slot .msg { font-size: 15px; flex: 1; min-width: 0; }
+  .slot .msg.err { color: #FFB4A8; }
+  button { font: 600 16px/1 var(--ui); padding: 11px 16px; border-radius: 7px; border: 0; cursor: pointer;
+           background: var(--pen); color: #fff; }
+  button:hover { background: var(--pen-dark); }
+  button:disabled { opacity: .55; cursor: default; }
+  button.quiet { background: transparent; color: var(--pen); box-shadow: inset 0 0 0 1.5px var(--pen); }
+  button.quiet:hover { background: #fff; }
+  :focus-visible { outline: 3px solid var(--pen); outline-offset: 2px; }
+  .slot :focus-visible { outline-color: #9DB4FF; }
+
+  .feed { margin: -4px 18px 0; position: relative; z-index: 1; filter: drop-shadow(0 6px 10px rgba(34, 37, 45, .22)); }
+  .paper { background: var(--paper); padding: 26px 22px 22px; position: relative; min-height: 220px;
+           font-family: var(--print); font-stretch: 80%; font-size: 13.5px; line-height: 1.75; }
+  .paper::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 7px;
+    background: linear-gradient(135deg, var(--paper) 25%, transparent 25%) -7px 0 / 14px 14px,
+                linear-gradient(225deg, var(--paper) 25%, transparent 25%) -7px 0 / 14px 14px; }
+  .paper.over { background: #F1F5FF; }
+  .paper.printing { animation: feed 1.2s steps(16, end) both; }
+  @keyframes feed { from { clip-path: inset(0 0 100% 0); transform: translateY(-22px); }
+                    to { clip-path: inset(0 0 -10px 0); transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .paper.printing { animation: none; } }
+
+  #empty { font-family: var(--ui); font-stretch: 100%; font-size: 17px; line-height: 1.45; padding: 18px 4px 8px; }
+  #empty strong { font-size: 22px; font-weight: 600; display: block; margin-bottom: 6px; }
+  #empty .test { margin-top: 22px; padding-top: 16px; border-top: 1.5px dashed #C9CDD3; font-size: 15px;
+                 color: #444B52; }
+  #empty .test label { display: flex; gap: 9px; align-items: flex-start; cursor: pointer; }
+  #empty .test input[type=range] { width: 100%; margin-top: 10px; accent-color: var(--pen); }
+  .samplerow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .samplerow button { font-size: 15px; padding: 9px 12px; }
+  input[type=checkbox] { accent-color: var(--pen); width: 17px; height: 17px; margin-top: 3px; flex: none; }
+
+  #text { margin: 0; font: inherit; white-space: pre-wrap; word-break: break-word; }
+  #text mark { color: inherit; padding: 1px 0; cursor: pointer; background: var(--hl-yellow); }
+  #text mark.ens, #text mark.both { background: var(--hl-pink); }
+  #text mark.both { box-shadow: inset 0 -3px 0 var(--hl-yellow); }
+  #text mark.word { background: #EDEEE6; box-shadow: inset 0 -2px 0 #B9BDC6; }
+  #text mark.cur { outline: 2px solid var(--pen); outline-offset: 1px; }
+  .tally { margin: 18px 0 0; padding: 12px 0 0; border-top: 1.5px dashed #9AA0A8; }
+  .tally div { display: flex; align-items: baseline; gap: 6px; }
+  .tally dt { order: 1; } .tally dd { order: 3; margin: 0; font-weight: 600; }
+  .tally div::after { content: ""; order: 2; flex: 1; border-bottom: 1.5px dotted #9AA0A8; transform: translateY(-4px); }
+
+  .check { margin: 26px 18px 0; display: flex; gap: 14px; align-items: flex-start; }
+  .check button { flex: none; }
+  #detail { font-size: 16px; line-height: 1.4; padding-top: 8px; }
+  #detail b { font-family: var(--print); font-stretch: 80%; background: #fff; padding: 1px 6px; }
+  .key { margin: 16px 18px 0; font-size: 15px; color: #3A4046; display: grid; gap: 6px; }
+  .key span { font-family: var(--print); font-stretch: 80%; font-size: 13px; padding: 1px 5px; margin-right: 6px; color: var(--ink); }
+  details { margin: 18px 18px 0; font-size: 15px; }
+  details summary { cursor: pointer; color: var(--pen); font-weight: 600; }
+  #before { font: 12.5px/1.7 var(--print); font-stretch: 80%; color: var(--faded); white-space: pre-wrap;
+            background: var(--paper); padding: 14px 16px; margin: 10px 0 0; max-height: 260px; overflow: auto; }
+
+  /* Photo viewer */
+  .seg { display: inline-flex; background: var(--counter-deep); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button { background: transparent; color: var(--ink); font-weight: 500; padding: 9px 14px; }
+  .seg button:hover { background: rgba(255, 255, 255, .5); }
+  .seg button[aria-pressed="true"] { background: var(--paper); font-weight: 600; box-shadow: 0 1px 2px rgba(34, 37, 45, .25); }
+  #view { margin-top: 14px; max-height: 76vh; overflow: auto; background: #AEB8B5; border-radius: 4px; }
+  #stage { position: relative; }
+  #stage img { display: block; width: 100%; }
+  #ring { position: absolute; border: 2.5px solid var(--pen); border-radius: 50%; box-shadow: 0 0 0 3px rgba(255, 255, 255, .85);
+          pointer-events: none; display: none; }
+  #caption { margin: 10px 0 0; font-size: 15px; color: #3A4046; min-height: 1.5em; }
+  #placeholder { padding: 70px 28px; font-size: 17px; color: #333A40; max-width: 44ch; }
+  .limits { margin: 34px 0 0; padding-top: 18px; border-top: 1.5px solid #AEB8B5; font-size: 15.5px; color: #333A40; max-width: 62ch; }
+  .limits h2 { font-size: 17px; margin: 0 0 6px; font-weight: 600; color: var(--ink); }
+  .limits ul { margin: 0; padding-left: 20px; }
+  .limits li { margin-top: 4px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Receipt Rescuer</h1>
+      <p>Read a faded receipt, and see which characters to double-check.</p>
+    </div>
+    <div id="model" role="status">Checking the model…</div>
+  </header>
+
+  <main class="bench">
+    <section aria-label="Receipt text">
+      <div class="slot">
+        <input type="file" id="file" accept="image/*" hidden>
+        <button id="pick">Choose a photo</button>
+        <div class="msg" id="status" role="status">No receipt loaded.</div>
+      </div>
+      <div class="feed">
+        <div class="paper" id="paper">
+          <div id="empty">
+            <strong>Drop a photo of a faded receipt here.</strong>
+            Crop it to the receipt first. Printed English receipts work best.
+            <div class="test" id="samples" hidden>
+              Or try one of ours. These were faded by our own fading simulator, not by time.
+              <div class="samplerow" id="samplerow"></div>
+            </div>
+            <div class="test">
+              <label><input type="checkbox" id="sim">
+                <span>No faded receipt to hand? Fade a clean one first, then rescue it.</span></label>
+              <input type="range" id="sev" min="0.3" max="1" step="0.05" value="0.6" disabled
+                     aria-label="How strongly to fade the receipt">
+            </div>
+          </div>
+          <div id="result" hidden>
+            <pre id="text"></pre>
+            <dl class="tally" id="tally"></dl>
+          </div>
+        </div>
+      </div>
+
+      <div id="tools" hidden>
+        <div class="check">
+          <button id="next">Next to check</button>
+          <div id="detail" aria-live="polite">Highlighted characters are the ones to compare with the paper.</div>
+        </div>
+        <div class="key">
+          <div><span style="background:var(--hl-pink)">8</span>The restoration passes read this character differently.</div>
+          <div><span style="background:var(--hl-yellow)">8</span>The text reader was not confident.</div>
+          <div><span style="background:#EDEEE6;box-shadow:inset 0 -2px 0 #B9BDC6">8</span>The rest of a word that contains one of the above. Check the whole word.</div>
+        </div>
+        <details><summary>What was readable before restoring</summary><pre id="before"></pre></details>
+      </div>
+    </section>
+
+    <section aria-label="Receipt photo">
+      <div class="seg" id="tabs" role="group" aria-label="Which image to show">
+        <button data-k="input" aria-pressed="false">As uploaded</button>
+        <button data-k="restored" aria-pressed="true">Restored</button>
+        <button data-k="overlay" aria-pressed="false">Where it was unsure</button>
+      </div>
+      <div id="view">
+        <div id="placeholder">The photo appears here, next to its restored version, once you load a receipt.</div>
+        <div id="stage" hidden><img id="img" alt="Receipt photo"><div id="ring"></div></div>
+      </div>
+      <p id="caption"></p>
+      <div class="limits">
+        <h2>What this can and can't tell you</h2>
+        <ul>
+          <li>A highlight means check this character. It does not mean the character is wrong.</li>
+          <li>A character with no highlight is not proven right.</li>
+          <li>Where no ink is left on the paper, nothing can be recovered. Text shown there is a guess.</li>
+          <li>Built for printed English thermal receipts, not handwriting or other documents.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const captions = {
+  input: "The photo as received, in grayscale.",
+  restored: "The restored image: the average of four restoration passes.",
+  overlay: "Amber shows where the four passes disagreed. Boxes mark highlighted characters."
+};
+let images = {}, size = { w: 1, h: 1 }, marks = [], cur = -1;
+
+function show(k) {
+  if (!images[k]) return;
+  $("img").src = images[k];
+  $("caption").textContent = captions[k];
+  for (const b of $("tabs").children) b.setAttribute("aria-pressed", b.dataset.k === k);
+}
+$("tabs").addEventListener("click", e => { if (e.target.dataset.k) show(e.target.dataset.k); });
+
+function status(msg, err) { $("status").textContent = msg; $("status").className = "msg" + (err ? " err" : ""); }
+
+function why(ch) {
+  if (ch.why === "word") return "part of a word with an uncertain character";
+  const parts = [];
+  if (ch.why !== "confidence") parts.push(Math.round(ch.dis * 4) + " of 4 passes read it differently");
+  if (ch.why !== "ensemble") parts.push("reader confidence " + ch.conf + "%");
+  return parts.join("; ");
+}
+
+function focusMark(i, scrollText) {
+  if (!marks.length) return;
+  if (cur >= 0) marks[cur].el.classList.remove("cur");
+  cur = (i + marks.length) % marks.length;
+  const { el, ch } = marks[cur];
+  el.classList.add("cur");
+  if (scrollText) el.scrollIntoView({ block: "nearest" });
+  const d = $("detail"); d.replaceChildren();
+  const b = document.createElement("b"); b.textContent = ch.c;
+  d.append(b, " " + why(ch) + ". (" + (cur + 1) + " of " + marks.length + ")");
+  const [x0, y0, x1, y1] = ch.box, pad = 6, ring = $("ring");
+  ring.style.left = (x0 - pad) / size.w * 100 + "%";
+  ring.style.top = (y0 - pad) / size.h * 100 + "%";
+  ring.style.width = (x1 - x0 + 2 * pad) / size.w * 100 + "%";
+  ring.style.height = (y1 - y0 + 2 * pad) / size.h * 100 + "%";
+  ring.style.display = "block";
+  ring.scrollIntoView({ block: "nearest" });
+}
+$("next").onclick = () => focusMark(cur + 1, true);
+
+function renderText(lines) {
+  const pre = $("text"); pre.replaceChildren(); marks = []; cur = -1;
+  lines.forEach((line, i) => {
+    let plain = "";
+    for (const ch of line) {
+      if (!ch.flag) { plain += ch.c; continue; }
+      if (plain) { pre.append(plain); plain = ""; }
+      const m = document.createElement("mark");
+      m.textContent = ch.c;
+      m.className = ch.why === "ensemble" ? "ens" : ch.why === "both" ? "both" : ch.why === "word" ? "word" : "";
+      const n = marks.length;
+      m.addEventListener("mouseenter", () => focusMark(n, false));
+      m.addEventListener("click", () => focusMark(n, false));
+      marks.push({ el: m, ch });
+      pre.append(m);
+    }
+    pre.append(plain + (i < lines.length - 1 ? "\n" : ""));
+  });
+}
+
+function tally(rows) {
+  const dl = $("tally"); dl.replaceChildren();
+  for (const [k, v] of rows) {
+    const div = document.createElement("div"), dt = document.createElement("dt"), dd = document.createElement("dd");
+    dt.textContent = k; dd.textContent = v; div.append(dt, dd); dl.append(div);
+  }
+}
+
+async function run(file, isSample) {
+  $("pick").disabled = true;
+  status("Restoring and reading. This can take up to a minute.");
+  const body = new FormData();
+  body.append("file", file);
+  body.append("simulate_fade", !isSample && $("sim").checked ? $("sev").value : "0");
+  try {
+    const resp = await fetch("/api/rescue", { method: "POST", body });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || "The server could not process that image.");
+    images = data.images; size = { w: data.stats.width, h: data.stats.height };
+    $("ring").style.display = "none";
+    $("placeholder").hidden = true; $("stage").hidden = false;
+    show("restored");
+    $("empty").hidden = true; $("result").hidden = false;
+    const rows = [];
+    if (data.lines) {
+      renderText(data.lines);
+      rows.push(["Characters read", data.stats.chars], ["To check", data.stats.flagged],
+                ["Share to check", (data.stats.flagged_share * 100).toFixed(1) + "%"]);
+      $("before").textContent = data.before_text || "(nothing readable)";
+      $("tools").hidden = false; $("next").disabled = !marks.length;
+      if (!data.stats.chars) $("text").textContent = "Nothing readable was recovered.\nToo little ink is left on this receipt.";
+      $("detail").textContent = marks.length
+        ? "Highlighted characters are the ones to compare with the paper."
+        : data.stats.chars ? "No characters were highlighted. That does not prove every character is right."
+        : "There is nothing to check. Compare the three image views to see what was left.";
+    } else {
+      $("text").textContent = "The text reader is unavailable: " + (data.ocr_error || "no OCR engine found") +
+        "\n\nThe restored image is shown on the right.";
+      $("tools").hidden = true;
+    }
+    rows.push(["Time taken", data.stats.seconds + " s"]);
+    if (data.stats.simulated_fade || isSample) rows.push(["Input", "simulated fade"]);
+    tally(rows);
+    const paper = $("paper"); paper.classList.remove("printing"); void paper.offsetWidth; paper.classList.add("printing");
+    status("Receipt read. Load another any time.");
+    $("pick").textContent = "Choose another photo";
+  } catch (e) { status(e.message, true); }
+  finally { $("pick").disabled = false; $("file").value = ""; }
+}
+
+$("pick").onclick = () => $("file").click();
+$("sim").onchange = () => { $("sev").disabled = !$("sim").checked; };
+$("file").onchange = () => { if ($("file").files[0]) run($("file").files[0]); };
+const paper = $("paper");
+["dragenter", "dragover"].forEach(t => paper.addEventListener(t, e => { e.preventDefault(); paper.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => paper.addEventListener(t, e => { e.preventDefault(); paper.classList.remove("over"); }));
+paper.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) run(f); });
+
+async function loadSample(s) {
+  status("Loading " + s.label.toLowerCase() + ".");
+  try {
+    const resp = await fetch("/samples/" + encodeURIComponent(s.file));
+    if (!resp.ok) throw new Error("That sample could not be loaded.");
+    await run(new File([await resp.blob()], s.file, { type: "image/png" }), true);
+  } catch (e) { status(e.message, true); }
+}
+fetch("/api/samples").then(r => r.json()).then(list => {
+  if (!list.length) return;
+  for (const s of list) {
+    const b = document.createElement("button");
+    b.className = "quiet"; b.textContent = s.label; b.onclick = () => loadSample(s);
+    $("samplerow").append(b);
+  }
+  $("samples").hidden = false;
+}).catch(() => {});
+
+fetch("/api/health").then(r => r.json()).then(h => {
+  const m = $("model");
+  if (!h.model) { m.textContent = h.model_error || "No model loaded."; m.className = "bad"; }
+  else if (!h.ocr) { m.textContent = "Text reader unavailable: " + h.ocr_error; m.className = "bad"; }
+  else m.textContent = "Model ready" + (h.weights && h.weights.iter ? ", trained for " + h.weights.iter.toLocaleString() + " steps" : "") + ".";
+}).catch(() => { $("model").textContent = "The server is not responding."; $("model").className = "bad"; });
+</script>
+</body>
+</html>

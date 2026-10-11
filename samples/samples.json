@@ -1,0 +1,26 @@
+[
+  {
+    "file": "sample1.png",
+    "label": "Sample 1",
+    "source": "X51007846366",
+    "severity": 0.4
+  },
+  {
+    "file": "sample2.png",
+    "label": "Sample 2",
+    "source": "X51005763940",
+    "severity": 0.4
+  },
+  {
+    "file": "sample3.png",
+    "label": "Sample 3",
+    "source": "X51006335547(2)",
+    "severity": 0.6
+  },
+  {
+    "file": "sample4.png",
+    "label": "Too faded to recover",
+    "source": "X51006554833",
+    "severity": 0.8
+  }
+]
