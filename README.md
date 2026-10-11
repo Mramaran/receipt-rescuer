@@ -28,8 +28,6 @@ Measured on 20 receipt scans held out from training (13,419 reference characters
 | 0.4 | 0.62 | 0.77 | **0.24** | 45% | 42% | 6.5% | 84% |
 | 0.6 | 0.68 | 0.84 | **0.32** | 50% | 46% | 8.4% | 85% |
 | 0.8 | 0.83 | 0.99 | **0.47** | 65% | 57% | 15% | 88% |
-| Real faded receipts, hand-transcribed | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
-
 CER is character error rate (lower is better). A flagged character is 4 to 6.5 times as likely to be wrong as an unflagged one, and the flags cover 84% to 88% of all wrong characters.
 
 The app flags whole words: when one character of a word is doubtful, the rest of the word is highlighted too, in a paler colour. That is why the flagged share is high. The same receipts scored with character-level flags only (`flag_chars(..., whole_words=False)`):
@@ -52,7 +50,7 @@ What each signal contributes at character level (fade strength 0.6):
 How to read these numbers:
 
 - The reference text is the OCR reading of the clean scan, so they measure how much of what OCR can read on a clean receipt is recovered after fading. Tesseract itself makes some mistakes on the clean scans.
-- The fading is synthetic and comes from the same generator the network was trained on (on different receipts). Real faded receipts may behave differently; that row is still to be measured.
+- The fading is synthetic and comes from the same generator the network was trained on (on different receipts). Real faded receipts may behave differently; they have not been measured.
 - Unflagged characters are still wrong 6.5% to 15% of the time, and roughly one wrong character in seven carries no flag. The flags narrow down where to look; they do not certify the rest.
 - Some scans are damaged before any fading (a misprinted price, for example). Restoration reproduces that damage; it does not fill in what was never printed.
 - The OCR-confidence threshold was chosen on 12 other held-out scans, which are excluded from this table (`--skip 20`).
